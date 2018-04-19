@@ -1,0 +1,115 @@
+##############################################################################
+#  Copyright (c) 2018 Intel Corporation
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+# 
+#      http://www.apache.org/licenses/LICENSE-2.0
+# 
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+##############################################################################
+
+#This file is an example of an environment file for defining the isolated
+#networks and related parameters.
+resource_registry:
+  OS::TripleO::Compute::Net::SoftwareConfig: /home/stack/templates/nic-config/compute.yaml
+  OS::TripleO::Controller::Net::SoftwareConfig: /home/stack/templates/nic-config/controller.yaml
+
+  # neutron-nuage-config.yaml
+  OS::TripleO::Services::NeutronDhcpAgent: OS::Heat::None
+  OS::TripleO::Services::NeutronL3Agent: OS::Heat::None
+  OS::TripleO::Services::NeutronMetadataAgent: OS::Heat::None
+  OS::TripleO::Services::NeutronOvsAgent: OS::Heat::None
+  OS::TripleO::Services::ComputeNeutronOvsAgent: OS::Heat::None
+  # Override the NeutronCorePlugin to use Nuage
+  OS::TripleO::Services::NeutronCorePlugin: OS::TripleO::Services::NeutronCorePluginML2Nuage
+
+  # nova-nuage-config.yaml for Baremetal Setup
+  OS::TripleO::ComputeExtraConfigPre: /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/compute/nova-nuage.yaml
+  OS::TripleO::Services::ComputeNeutronCorePlugin: /usr/share/openstack-tripleo-heat-templates/puppet/services/neutron-compute-plugin-nuage.yaml
+  #OS::TripleO::Services::ComputeNeutronCorePlugin: OS::TripleO::Services::ComputeNeutronCorePluginNuage  
+
+parameter_defaults:
+  # This section is where deployment-specific configuration is done
+  # Customize the IP subnets to match the local environment
+  InternalApiNetCidr: 10.250.205.0/24
+  StorageNetCidr: 10.250.208.0/24
+  StorageMgmtNetCidr: 10.250.209.0/24
+  TenantNetCidr: 10.250.206.0/24
+  ExternalNetCidr: 10.250.207.0/24
+  # CIDR subnet mask length for provisioning network
+  ControlPlaneSubnetCidr: '24'
+  # Customize the IP ranges on each network to use for static IPs and VIPs
+  InternalApiAllocationPools: [{'start': '10.250.205.10', 'end': '10.250.205.200'}]
+  StorageAllocationPools: [{'start': '10.250.208.10', 'end': '10.250.208.200'}]
+  StorageMgmtAllocationPools: [{'start': '10.250.209.10', 'end': '10.250.209.200'}]
+  TenantAllocationPools: [{'start': '10.250.206.10', 'end': '10.250.206.200'}]
+  # Leave room if the external network is also used for floating IPs
+  ExternalAllocationPools: [{'start': '10.250.207.10', 'end': '10.250.207.50'}]
+  # Gateway router for the external network
+  ExternalInterfaceDefaultRoute: 10.250.207.1
+  # Gateway router for the provisioning network (or Undercloud IP)
+  ControlPlaneDefaultRoute: 10.250.175.166
+  # Generally the IP of the Undercloud
+  EC2MetadataIp: 10.250.175.166
+  # Define the DNS servers (maximum 2) for the overcloud nodes
+  DnsServers: ["10.250.175.154","8.8.8.8"]
+  # Customize the VLAN IDs to match the local environment
+  InternalApiNetworkVlanID: 205
+  StorageNetworkVlanID: 208
+  StorageMgmtNetworkVlanID: 209
+  TenantNetworkVlanID: 206
+  ExternalNetworkVlanID: 207
+  # Set to empty string to enable multiple external networks or VLANs
+  NeutronExternalNetworkBridge: "''"
+  NeutronTunnelTypes: 'vxlan'
+  # Customize bonding options, e.g. "mode=4 lacp_rate=1 updelay=1000 miimon=100"
+  #BondInterfaceOvsOptions: "mode=active-backup"
+  #BondInterfaceOvsOptions: "mode=balance-slb"
+
+  OvercloudControlFlavor: control
+  OvercloudComputeFlavor: compute
+  ControllerCount: 1
+  ComputeCount: 2
+  CephStorageCount: 0
+  BlocktorageCount: 0
+  ObjectStorageCount: 0
+  
+  # Provide LVM group size for Cinder Volumes in MB, default size is only 10GB, 
+  # it must be extendend to spawn more larger VMs
+  # 200GB allocated
+  CinderLVMLoopDeviceSize: 204800
+
+  # neutron-nuage-config.yaml
+  NeutronNuageNetPartitionName: 'Nuage_Partition'
+  NeutronNuageVSDIp: '10.250.175.167:8443'
+  NeutronNuageVSDUsername: 'OSadmin'
+  NeutronNuageVSDPassword: 'OSadmin'
+  NeutronNuageVSDOrganization: 'csp'
+  NeutronNuageBaseURIVersion: 'v5_0'
+  NeutronNuageCMSId: ''
+  UseForwardedFor: true
+  NeutronServicePlugins: 'NuagePortAttributes,NuageAPI,NuageL3'
+  NeutronDBSyncExtraParams: '--config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini --config-file /etc/neutron/plugins/nuage/plugin.ini'
+  NeutronTypeDrivers: "vxlan"
+  NeutronNetworkType: "vxlan"
+  NeutronMechanismDrivers: "nuage"
+  NeutronPluginExtensions: "nuage_subnet,nuage_port,port_security"
+  NeutronVniRanges: "1:1000"
+  NovaOVSBridge: 'alubr0'
+  NeutronMetadataProxySharedSecret: 'NuageNetworksSharedSecret'
+  InstanceNameTemplate: 'inst-%08x'
+
+  # nova-nuage-config.yaml for Baremetal Setup
+  NuageActiveController: '10.250.175.168'
+  NuageStandbyController: '0.0.0.0'
+  NovaOVSBridge: 'alubr0'  
+  NovaComputeLibvirtType: 'kvm'
+  NovaIPv6: False  
+  NuageMetadataProxySharedSecret: 'NuageNetworksSharedSecret'
+  NuageNovaApiEndpoint: 'internalURL'
